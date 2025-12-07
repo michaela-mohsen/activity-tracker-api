@@ -6,6 +6,7 @@ import com.mm.activitytracker.service.DataService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +17,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Slf4j
@@ -56,17 +60,34 @@ public class DataServiceImpl implements DataService {
             for (Column column : collectedData.getColumns()) {
                 headers.add(column.getColumnName());
             }
-            Iterable<CSVRecord> records = CSVFormat.EXCEL.builder().setHeader(headers.toArray(new String[0])).setSkipHeaderRecord(true).get().parse(bufferedReader);
+            Iterable<CSVRecord> records = CSVFormat.EXCEL.builder().setHeader().get().parse(bufferedReader);
             for(CSVRecord record : records) {
                 JSONObject jsonObject = new JSONObject();
+                Map<String, String> map = record.toMap();
                 for(String header : headers) {
                     Optional<Column> column = collectedData.getColumns().stream().filter(column1 -> column1.getColumnName().equals(header)).findFirst();
                     if(column.isPresent()) {
-                        log.info("found column: {}", column.get());
-                        String data = record.get(column.get().getColumnName());
-                        jsonObject.put(column.get().getFieldName(), data);
+                        Column currentColumn = column.get();
+                        String data = map.get(currentColumn.getColumnName());
+                        String dataType = currentColumn.getDataType();
+                        Object dataToAdd;
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ssZ");
+                        if(!StringUtils.isBlank(data)) {
+                            dataToAdd = switch (dataType) {
+                                case "datetimeoffset" -> {
+                                    ZonedDateTime zonedDateTime = ZonedDateTime.parse(data, formatter);
+                                    yield zonedDateTime.withZoneSameInstant(ZoneId.of("UTC")).toOffsetDateTime();
+                                }
+                                case "number" -> BigDecimal.valueOf(Integer.parseInt(data));
+                                default -> data;
+                            };
+                        } else {
+                            log.info("no data found for {} in {}", header, collectedData.getDataSection());
+                            dataToAdd = null;
+                        }
+                        jsonObject.put(column.get().getFieldName(), dataToAdd);
                     } else {
-                        log.info("skipping column");
+                        log.info("column not found for {} header", header);
                     }
                 }
                 jsonArray.put(jsonObject);
