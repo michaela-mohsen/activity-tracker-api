@@ -13,15 +13,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 @Slf4j
 @Service
@@ -46,55 +45,67 @@ public class DataServiceImpl implements DataService {
             throw new RuntimeException("platform not found");
         }
         JSONArray jsonArray = new JSONArray();
-        if(Objects.requireNonNull(file.getOriginalFilename()).endsWith(".csv")) {
-            InputStream resourceInputStream = file.getResource().getInputStream();
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(resourceInputStream, StandardCharsets.UTF_8));
-            String originalFileName = file.getOriginalFilename().toLowerCase();
-            Optional<CollectedData> collectedDataOptional = sourcePlatform.getCollectedData().stream().filter(collectedData1 -> originalFileName.contains(collectedData1.getDataSection())).findFirst();
-            if(collectedDataOptional.isEmpty()) {
-               log.error("dataSection from file not found");
-               throw new RuntimeException("dataSection from file not found");
-            }
-            CollectedData collectedData = collectedDataOptional.get();
-            List<String> headers = new ArrayList<>();
-            for (Column column : collectedData.getColumns()) {
-                headers.add(column.getColumnName());
-            }
-            Iterable<CSVRecord> records = CSVFormat.EXCEL.builder().setHeader().get().parse(bufferedReader);
-            for(CSVRecord record : records) {
-                JSONObject jsonObject = new JSONObject();
-                Map<String, String> map = record.toMap();
-                for(String header : headers) {
-                    Optional<Column> column = collectedData.getColumns().stream().filter(column1 -> column1.getColumnName().equals(header)).findFirst();
-                    if(column.isPresent()) {
-                        Column currentColumn = column.get();
-                        String data = map.get(currentColumn.getColumnName());
-                        String dataType = currentColumn.getDataType();
-                        Object dataToAdd;
-                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ssZ");
-                        if(!StringUtils.isBlank(data)) {
-                            dataToAdd = switch (dataType) {
-                                case "datetimeoffset" -> {
-                                    ZonedDateTime zonedDateTime = ZonedDateTime.parse(data, formatter);
-                                    yield zonedDateTime.withZoneSameInstant(ZoneId.of("UTC")).toOffsetDateTime();
+        try(ZipInputStream zipInputStream = new ZipInputStream(file.getInputStream(), StandardCharsets.UTF_8)) {
+            ZipEntry zipEntry;
+            List<String> filesToScan = List.of(".csv");
+            while ((zipEntry = zipInputStream.getNextEntry()) != null) {
+                if(!zipEntry.isDirectory()) {
+                    String fileName = zipEntry.getName();
+                    Optional<CollectedData> collectedDataOptional = sourcePlatform.getCollectedData().stream().filter(collectedData -> fileName.contains(collectedData.getDataSection()) && filesToScan.stream().anyMatch(fileName::endsWith)).findFirst();
+                    if (collectedDataOptional.isPresent()) {
+                        log.info("file to search found: {} | {}", collectedDataOptional.get().getDataSection(), fileName);
+                        if(fileName.endsWith(".csv")) {
+                            Reader reader = new InputStreamReader(zipInputStream, StandardCharsets.UTF_8);
+                            CollectedData collectedData = collectedDataOptional.get();
+                            List<String> headers = new ArrayList<>();
+                            for (Column column : collectedData.getColumns()) {
+                                headers.add(column.getColumnName());
+                            }
+                            Iterable<CSVRecord> records = CSVFormat.EXCEL.builder().setHeader().get().parse(reader);
+                            JSONArray innerJsonArray = new JSONArray();
+                            for(CSVRecord record : records) {
+                                JSONObject jsonObject = new JSONObject();
+                                Map<String, String> map = record.toMap();
+                                for(String header : headers) {
+                                    Optional<Column> column = collectedData.getColumns().stream().filter(column1 -> column1.getColumnName().equals(header)).findFirst();
+                                    if(column.isPresent()) {
+                                        Column currentColumn = column.get();
+                                        String data = map.get(currentColumn.getColumnName());
+                                        String dataType = currentColumn.getDataType();
+                                        Object dataToAdd;
+                                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ssZ");
+                                        if(!StringUtils.isBlank(data)) {
+                                            dataToAdd = switch (dataType) {
+                                                case "datetimeoffset" -> {
+                                                    ZonedDateTime zonedDateTime = ZonedDateTime.parse(data, formatter);
+                                                    yield zonedDateTime.withZoneSameInstant(ZoneId.of("UTC")).toOffsetDateTime();
+                                                }
+                                                case "timestamp" -> OffsetDateTime.parse(data);
+                                                case "number" -> BigDecimal.valueOf(Integer.parseInt(data));
+                                                case "double" -> BigDecimal.valueOf(Double.parseDouble(data));
+                                                default -> data;
+                                            };
+                                        } else {
+                                            dataToAdd = null;
+                                        }
+                                        jsonObject.put(column.get().getFieldName(), dataToAdd);
+                                    } else {
+                                        log.info("column not found for {} header", header);
+                                    }
                                 }
-                                case "number" -> BigDecimal.valueOf(Integer.parseInt(data));
-                                default -> data;
-                            };
-                        } else {
-                            log.info("no data found for {} in {}", header, collectedData.getDataSection());
-                            dataToAdd = null;
+                                innerJsonArray.put(jsonObject);
+                            }
+                            jsonArray.put(innerJsonArray);
                         }
-                        jsonObject.put(column.get().getFieldName(), dataToAdd);
-                    } else {
-                        log.info("column not found for {} header", header);
                     }
                 }
-                jsonArray.put(jsonObject);
+                zipInputStream.closeEntry();
             }
         }
+        // map data to java objects
+        // save data in repository
         DataImportResponse dataImportResponse = new DataImportResponse();
-        dataImportResponse.setJsonArray(jsonArray.toList());
+        dataImportResponse.setJsonArray(jsonArray.getJSONArray(1).toList());
         return dataImportResponse;
     }
 }
