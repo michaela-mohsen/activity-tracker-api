@@ -19,6 +19,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -48,6 +50,7 @@ public class DataServiceImpl implements DataService {
         try(ZipInputStream zipInputStream = new ZipInputStream(file.getInputStream(), StandardCharsets.UTF_8)) {
             ZipEntry zipEntry;
             List<String> filesToScan = List.of(".csv");
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ssZ");
             while ((zipEntry = zipInputStream.getNextEntry()) != null) {
                 if(!zipEntry.isDirectory()) {
                     String fileName = zipEntry.getName();
@@ -55,40 +58,27 @@ public class DataServiceImpl implements DataService {
                     if (collectedDataOptional.isPresent()) {
                         log.info("file to search found: {} | {}", collectedDataOptional.get().getDataSection(), fileName);
                         if(fileName.endsWith(".csv")) {
-                            Reader reader = new InputStreamReader(zipInputStream, StandardCharsets.UTF_8);
+                            InputStreamReader reader = new InputStreamReader(zipInputStream, StandardCharsets.UTF_8);
                             CollectedData collectedData = collectedDataOptional.get();
                             List<String> headers = new ArrayList<>();
                             for (Column column : collectedData.getColumns()) {
                                 headers.add(column.getColumnName());
                             }
+                            Map<String, Column> columnByName = collectedData.getColumns().stream().collect(Collectors.toMap(Column::getColumnName, Function.identity()));
                             Iterable<CSVRecord> records = CSVFormat.EXCEL.builder().setHeader().get().parse(reader);
                             JSONArray innerJsonArray = new JSONArray();
                             for(CSVRecord record : records) {
                                 JSONObject jsonObject = new JSONObject();
                                 Map<String, String> map = record.toMap();
                                 for(String header : headers) {
-                                    Optional<Column> column = collectedData.getColumns().stream().filter(column1 -> column1.getColumnName().equals(header)).findFirst();
-                                    if(column.isPresent()) {
-                                        Column currentColumn = column.get();
-                                        String data = map.get(currentColumn.getColumnName());
-                                        String dataType = currentColumn.getDataType();
+                                    Column column = columnByName.get(header);
+                                    if(column != null) {
+                                        String data = map.get(header);
+                                        String dataType = column.getDataType();
                                         Object dataToAdd;
-                                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ssZ");
-                                        if(!StringUtils.isBlank(data)) {
-                                            dataToAdd = switch (dataType) {
-                                                case "datetimeoffset" -> {
-                                                    ZonedDateTime zonedDateTime = ZonedDateTime.parse(data, formatter);
-                                                    yield zonedDateTime.withZoneSameInstant(ZoneId.of("UTC")).toOffsetDateTime();
-                                                }
-                                                case "timestamp" -> OffsetDateTime.parse(data);
-                                                case "number" -> BigDecimal.valueOf(Integer.parseInt(data));
-                                                case "double" -> BigDecimal.valueOf(Double.parseDouble(data));
-                                                default -> data;
-                                            };
-                                        } else {
-                                            dataToAdd = null;
-                                        }
-                                        jsonObject.put(column.get().getFieldName(), dataToAdd);
+                                        //conversion method
+                                        dataToAdd = convert(data, dataType, formatter);
+                                        jsonObject.put(column.getFieldName(), dataToAdd);
                                     } else {
                                         log.info("column not found for {} header", header);
                                     }
@@ -107,5 +97,20 @@ public class DataServiceImpl implements DataService {
         DataImportResponse dataImportResponse = new DataImportResponse();
         dataImportResponse.setJsonArray(jsonArray.getJSONArray(1).toList());
         return dataImportResponse;
+    }
+
+    private Object convert(String data, String dataType, DateTimeFormatter formatter) {
+        if(StringUtils.isBlank(data)) {
+            return null;
+        }
+        return switch (dataType) {
+            case "datetimeoffset" -> {
+                ZonedDateTime zonedDateTime = ZonedDateTime.parse(data, formatter);
+                yield zonedDateTime.withZoneSameInstant(ZoneId.of("UTC")).toOffsetDateTime();
+            }
+            case "timestamp" -> OffsetDateTime.parse(data);
+            case "number", "double" -> new BigDecimal(data);
+            default -> data;
+        };
     }
 }
