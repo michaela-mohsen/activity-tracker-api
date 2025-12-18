@@ -1,11 +1,12 @@
 package com.mm.activitytracker.service.impl;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mm.activitytracker.entity.*;
 import com.mm.activitytracker.repository.SourcePlatformRepository;
 import com.mm.activitytracker.service.DataService;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -30,6 +31,9 @@ public class DataServiceImpl implements DataService {
     @Autowired
     private SourcePlatformRepository sourcePlatformRepository;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @Override
     public DataImportResponse importData(MultipartFile file, DataImportRequest request) throws IOException {
         // file can be json, xml, or csv data
@@ -47,44 +51,37 @@ public class DataServiceImpl implements DataService {
             throw new RuntimeException("platform not found");
         }
         JSONArray jsonArray = new JSONArray();
+        objectMapper.disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
         try(ZipInputStream zipInputStream = new ZipInputStream(file.getInputStream(), StandardCharsets.UTF_8)) {
             ZipEntry zipEntry;
-            List<String> filesToScan = List.of(".csv");
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ssZ");
+            List<String> filesToScan = List.of(".json");
             while ((zipEntry = zipInputStream.getNextEntry()) != null) {
                 if(!zipEntry.isDirectory()) {
                     String fileName = zipEntry.getName();
                     Optional<CollectedData> collectedDataOptional = sourcePlatform.getCollectedData().stream().filter(collectedData -> fileName.contains(collectedData.getDataSection()) && filesToScan.stream().anyMatch(fileName::endsWith)).findFirst();
                     if (collectedDataOptional.isPresent()) {
                         log.info("file to search found: {} | {}", collectedDataOptional.get().getDataSection(), fileName);
-                        if(fileName.endsWith(".csv")) {
+                        if(fileName.endsWith(".json")) {
                             InputStreamReader reader = new InputStreamReader(zipInputStream, StandardCharsets.UTF_8);
                             CollectedData collectedData = collectedDataOptional.get();
-                            List<String> headers = new ArrayList<>();
-                            for (Column column : collectedData.getColumns()) {
-                                headers.add(column.getColumnName());
-                            }
-                            Map<String, Column> columnByName = collectedData.getColumns().stream().collect(Collectors.toMap(Column::getColumnName, Function.identity()));
-                            Iterable<CSVRecord> records = CSVFormat.EXCEL.builder().setHeader().get().parse(reader);
+                            Map<String, Column> columnByNameMap = collectedData.getColumns().stream().collect(Collectors.toMap(Column::getColumnName, Function.identity()));
+                            JsonNode treeNode = objectMapper.readTree(reader);
                             JSONArray innerJsonArray = new JSONArray();
-                            for(CSVRecord record : records) {
+                            treeNode.elements().forEachRemaining(jsonNode -> {
                                 JSONObject jsonObject = new JSONObject();
-                                Map<String, String> map = record.toMap();
-                                for(String header : headers) {
-                                    Column column = columnByName.get(header);
-                                    if(column != null) {
-                                        String data = map.get(header);
-                                        String dataType = column.getDataType();
-                                        Object dataToAdd;
-                                        //conversion method
-                                        dataToAdd = convert(data, dataType, formatter);
-                                        jsonObject.put(column.getFieldName(), dataToAdd);
-                                    } else {
-                                        log.info("column not found for {} header", header);
+                                columnByNameMap.forEach((name, column) -> {
+                                    JsonNode dataNode = jsonNode.get(name);
+                                    if(dataNode == null) {
+                                        return;
                                     }
-                                }
+                                    String data = dataNode.asText("");
+                                    String dataType = column.getDataType();
+                                    String formatPattern = column.getFormatPattern();
+                                    Object dataToAdd = convert(data, dataType, formatPattern);
+                                    jsonObject.put(column.getFieldName(), dataToAdd);
+                                });
                                 innerJsonArray.put(jsonObject);
-                            }
+                            });
                             jsonArray.put(innerJsonArray);
                         }
                     }
@@ -99,14 +96,19 @@ public class DataServiceImpl implements DataService {
         return dataImportResponse;
     }
 
-    private Object convert(String data, String dataType, DateTimeFormatter formatter) {
+    private Object convert(String data, String dataType, String formatPattern) {
         if(StringUtils.isBlank(data)) {
             return null;
         }
         return switch (dataType) {
-            case "datetimeoffset" -> {
-                ZonedDateTime zonedDateTime = ZonedDateTime.parse(data, formatter);
-                yield zonedDateTime.withZoneSameInstant(ZoneId.of("UTC")).toOffsetDateTime();
+            case "datetime" -> {
+                DateTimeFormatter customFormatter = DateTimeFormatter.ofPattern(formatPattern, Locale.US);
+                LocalDateTime localDateTime = LocalDateTime.parse(data, customFormatter);
+                yield localDateTime.atOffset(ZoneOffset.of("Z"));
+            }
+            case "localdatetime" -> {
+                LocalDateTime localDateTime = LocalDateTime.parse(data);
+                yield localDateTime.atOffset(ZoneOffset.of("Z"));
             }
             case "timestamp" -> OffsetDateTime.parse(data);
             case "number", "double" -> new BigDecimal(data);
