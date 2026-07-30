@@ -27,7 +27,7 @@ public class DataController {
         return new ResponseEntity<>(dataImportResponse, HttpStatus.OK);
     }
 
-    @GetMapping("export")
+    @GetMapping("/export")
     public ResponseEntity<?> exportData() {
         return new ResponseEntity<>("exportData successful", HttpStatus.OK);
     }

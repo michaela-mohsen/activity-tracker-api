@@ -1,5 +1,6 @@
 package com.mm.activitytracker.model;
 
+import com.mm.user.core.entity.User;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -11,6 +12,7 @@ import java.util.UUID;
 
 @Data
 @Entity
+@Table(name = "exercise")
 public class Exercise {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -34,6 +36,7 @@ public class Exercise {
     @Column
     private String source;
 
-    //User
-
+    @JoinColumn(name = "user_id", referencedColumnName = "id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    private User user;
 }
