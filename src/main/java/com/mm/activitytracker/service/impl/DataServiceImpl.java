@@ -8,6 +8,8 @@ import com.mm.activitytracker.model.Exercise;
 import com.mm.activitytracker.repository.ExerciseRepository;
 import com.mm.activitytracker.repository.SourcePlatformRepository;
 import com.mm.activitytracker.service.DataService;
+import com.mm.user.core.entity.User;
+import com.mm.user.core.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
@@ -36,6 +38,8 @@ public class DataServiceImpl implements DataService {
     @Autowired
     private ExerciseRepository exerciseRepository;
 
+    private UserService userService;
+
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -50,6 +54,16 @@ public class DataServiceImpl implements DataService {
             log.error("file not provided");
             throw new RuntimeException("file not provided");
         }
+        if (request.getUserId() == null) {
+            log.error("User email not provided");
+            throw new RuntimeException("User email not provided");
+        }
+        User existingUser = userService.getUserById(request.getUserId());
+        if (existingUser == null) {
+            log.error("User not found");
+            throw new RuntimeException("User not found");
+        }
+
         SourcePlatform sourcePlatform = sourcePlatformRepository.findByPlatform(request.getSourcePlatform());
         if(sourcePlatform == null) {
             log.error("platform not found");
@@ -95,7 +109,7 @@ public class DataServiceImpl implements DataService {
                             // map data to java objects
                             // save data in repository
                             if(collectedData.getDataSection().equals("exercise")) {
-                                List<Exercise> mappedExercises = mapJsonArrayToExercise(innerJsonArray);
+                                List<Exercise> mappedExercises = mapJsonArrayToExercise(innerJsonArray, existingUser.getId());
 //                                exerciseRepository.saveAll(mappedExercises);
                             }
                             jsonArray.put(innerJsonArray);
@@ -110,11 +124,12 @@ public class DataServiceImpl implements DataService {
         return dataImportResponse;
     }
 
-    private List<Exercise> mapJsonArrayToExercise(JSONArray innerJsonArray) {
+    private List<Exercise> mapJsonArrayToExercise(JSONArray innerJsonArray, UUID userId) {
         List<Exercise> exerciseList = new ArrayList<>();
         if(!innerJsonArray.isEmpty()) {
             innerJsonArray.forEach(object -> {
                 Exercise newExercise = objectMapper.convertValue(object, Exercise.class);
+                newExercise.setUserId(userId);
                 exerciseList.add(newExercise);
             });
         }

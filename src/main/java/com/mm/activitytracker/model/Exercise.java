@@ -1,6 +1,5 @@
 package com.mm.activitytracker.model;
 
-import com.mm.user.core.entity.User;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -35,8 +34,6 @@ public class Exercise {
     private BigDecimal totalDistance;
     @Column
     private String source;
-
-    @JoinColumn(name = "user_id", referencedColumnName = "id")
-    @ManyToOne(fetch = FetchType.LAZY)
-    private User user;
+    @Column
+    private UUID userId;
 }

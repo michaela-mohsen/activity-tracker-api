@@ -2,11 +2,10 @@ package com.mm.activitytracker.entity;
 
 import lombok.Data;
 
-import java.io.File;
+import java.util.UUID;
 
 @Data
 public class DataImportRequest {
     private Platform sourcePlatform;
-    private String fileType;
-    private File file;
+    private UUID userId;
 }
