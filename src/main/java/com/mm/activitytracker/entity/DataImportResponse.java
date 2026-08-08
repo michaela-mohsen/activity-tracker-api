@@ -1,5 +1,6 @@
 package com.mm.activitytracker.entity;
 
+import com.mm.activitytracker.model.Exercise;
 import lombok.Data;
 
 import java.util.List;
@@ -7,5 +8,5 @@ import java.util.List;
 @Data
 public class DataImportResponse {
     private String id;
-    private List<Object> jsonArray;
+    private List<Exercise> jsonArray;
 }

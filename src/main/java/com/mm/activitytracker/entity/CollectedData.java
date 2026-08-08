@@ -7,5 +7,5 @@ import java.util.List;
 @Data
 public class CollectedData {
     private String dataSection;
-    private List<Column> columns;
+    private List<Field> fields;
 }

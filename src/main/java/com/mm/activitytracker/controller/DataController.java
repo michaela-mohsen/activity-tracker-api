@@ -1,7 +1,7 @@
 package com.mm.activitytracker.controller;
 
-import com.mm.activitytracker.entity.DataImportRequest;
 import com.mm.activitytracker.entity.DataImportResponse;
+import com.mm.activitytracker.entity.Platform;
 import com.mm.activitytracker.service.impl.DataServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/v1/data")
@@ -20,10 +21,10 @@ public class DataController {
     @Autowired
     private DataServiceImpl dataService;
 
-    @PostMapping("/import")
-    public ResponseEntity<?> importData(@RequestPart MultipartFile file, @RequestPart DataImportRequest dataImportRequest) throws IOException {
-        log.info("file: {}, dataImportRequest: {}", file.getName(), dataImportRequest.toString());
-        DataImportResponse dataImportResponse = dataService.importData(file, dataImportRequest);
+    @PostMapping(path = "/import")
+    public ResponseEntity<?> importData(@RequestPart("file") MultipartFile file, @RequestParam Platform platform, @RequestParam UUID userId) throws IOException {
+        log.info("file: {}, source platform: {}, user id: {}", file.getName(), platform, userId.toString());
+        DataImportResponse dataImportResponse = dataService.importData(file, platform, userId);
         return new ResponseEntity<>(dataImportResponse, HttpStatus.OK);
     }
 

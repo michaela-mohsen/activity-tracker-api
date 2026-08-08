@@ -1,10 +1,14 @@
 package com.mm.activitytracker.entity;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
-public class Column {
-    private String columnName;
+@NoArgsConstructor
+@AllArgsConstructor
+public class Field {
+    private String dataPath;
     private String dataType;
     private String fieldName;
     private String formatPattern;

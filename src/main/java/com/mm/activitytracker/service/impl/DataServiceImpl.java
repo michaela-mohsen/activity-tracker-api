@@ -3,18 +3,18 @@ package com.mm.activitytracker.service.impl;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mm.activitytracker.entity.*;
 import com.mm.activitytracker.model.Exercise;
-import com.mm.activitytracker.repository.ExerciseRepository;
 import com.mm.activitytracker.repository.SourcePlatformRepository;
 import com.mm.activitytracker.service.DataService;
+import com.mm.activitytracker.service.ExerciseService;
 import com.mm.user.core.entity.User;
 import com.mm.user.core.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -36,104 +36,79 @@ public class DataServiceImpl implements DataService {
     private SourcePlatformRepository sourcePlatformRepository;
 
     @Autowired
-    private ExerciseRepository exerciseRepository;
+    private ExerciseService exerciseService;
 
+    @Autowired
     private UserService userService;
 
     @Autowired
     private ObjectMapper objectMapper;
 
     @Override
-    public DataImportResponse importData(MultipartFile file, DataImportRequest request) throws IOException {
+    public DataImportResponse importData(MultipartFile file, Platform platform, UUID userId) throws IOException {
         // file can be json, xml, or csv data
-        if (request == null) {
-            log.error("request not provided");
-            throw new RuntimeException("request not provided");
-        }
         if (file.isEmpty()) {
             log.error("file not provided");
             throw new RuntimeException("file not provided");
         }
-        if (request.getUserId() == null) {
-            log.error("User email not provided");
-            throw new RuntimeException("User email not provided");
+        if (userId == null) {
+            log.error("User id not provided");
+            throw new RuntimeException("User id not provided");
         }
-        User existingUser = userService.getUserById(request.getUserId());
+        User existingUser = userService.getUserById(userId);
         if (existingUser == null) {
             log.error("User not found");
-            throw new RuntimeException("User not found");
+            throw new UsernameNotFoundException("User not found");
         }
-
-        SourcePlatform sourcePlatform = sourcePlatformRepository.findByPlatform(request.getSourcePlatform());
+        SourcePlatform sourcePlatform = sourcePlatformRepository.findByPlatform(platform);
         if(sourcePlatform == null) {
-            log.error("platform not found");
-            throw new RuntimeException("platform not found");
+            log.error("platform configuration not found");
+            throw new RuntimeException("platform configuration not found");
         }
-        JSONArray jsonArray = new JSONArray();
         objectMapper.disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
+        List<Exercise> userExercises = exerciseService.getExercisesByUserId(existingUser.getId());
+        Map<Long, Exercise> exerciseIndex = userExercises.stream()
+                .collect(Collectors.toMap(Exercise::getOriginalId, Function.identity()));
+        Map<String, CollectedData> collectedDataMap = sourcePlatform.getCollectedData().stream().collect(Collectors.toMap(CollectedData::getDataSection, Function.identity()));
         try (ZipInputStream zipInputStream = new ZipInputStream(file.getInputStream(), StandardCharsets.UTF_8)) {
-            ZipEntry zipEntry;
-            List<String> filesToScan = List.of(".json");
-            while ((zipEntry = zipInputStream.getNextEntry()) != null) {
-                if (!zipEntry.isDirectory()) {
-                    String fileName = zipEntry.getName();
-                    Optional<CollectedData> collectedDataOptional = sourcePlatform.getCollectedData().stream()
-                            .filter(collectedData -> fileName.contains(collectedData.getDataSection())
-                                    && filesToScan.stream().anyMatch(fileName::endsWith))
-                            .findFirst();
-                    if (collectedDataOptional.isPresent()) {
-                        log.info("file to search found: {} | {}", collectedDataOptional.get().getDataSection(),
-                                fileName);
-                        if (fileName.endsWith(".json")) {
-                            InputStreamReader reader = new InputStreamReader(zipInputStream, StandardCharsets.UTF_8);
-                            CollectedData collectedData = collectedDataOptional.get();
-                            Map<String, Column> columnByNameMap = collectedData.getColumns().stream()
-                                    .collect(Collectors.toMap(Column::getColumnName, Function.identity()));
-                            JsonNode treeNode = objectMapper.readTree(reader);
-                            JSONArray innerJsonArray = new JSONArray();
-                            treeNode.elements().forEachRemaining(jsonNode -> {
-                                JSONObject jsonObject = new JSONObject();
-                                columnByNameMap.forEach((name, column) -> {
-                                    JsonNode dataNode = getNodeByPath(jsonNode, name);
-                                    if (dataNode == null) {
-                                        return;
-                                    }
-                                    String data = dataNode.asText("");
-                                    String dataType = column.getDataType();
-                                    String formatPattern = column.getFormatPattern();
-                                    Object dataToAdd = convert(data, dataType, formatPattern);
-                                    jsonObject.put(column.getFieldName(), dataToAdd);
-                                });
-                                innerJsonArray.put(jsonObject);
-                            });
-                            // map data to java objects
-                            // save data in repository
-                            if(collectedData.getDataSection().equals("exercise")) {
-                                List<Exercise> mappedExercises = mapJsonArrayToExercise(innerJsonArray, existingUser.getId());
-//                                exerciseRepository.saveAll(mappedExercises);
-                            }
-                            jsonArray.put(innerJsonArray);
-                        }
-                    }
+            ZipEntry entry;
+            Set<String> filesToScan = Set.of(".json");
+            while((entry = zipInputStream.getNextEntry()) != null) {
+                if(entry.isDirectory()) {
+                    zipInputStream.closeEntry();
+                    continue;
                 }
-                zipInputStream.closeEntry();
+                String fileName = entry.getName();
+                String fileExtension = fileName.substring(fileName.lastIndexOf("."));
+                Optional<String> fileKey = collectedDataMap.keySet().stream().filter(fileName::contains).findFirst();
+                if (!filesToScan.contains(fileExtension) || fileKey.isEmpty()) {
+                    continue;
+                }
+                CollectedData dataByCategory = collectedDataMap.get(fileKey.get());
+                log.info("{} data section found in {}: {}", platform, fileName, dataByCategory.getDataSection());
+                Map<String, Field> dataPathMap = dataByCategory.getFields().stream().collect(Collectors.toMap(Field::getDataPath, Function.identity()));
+                InputStreamReader entryReader = new InputStreamReader(zipInputStream, StandardCharsets.UTF_8);
+                JsonNode treeNode = objectMapper.readTree(entryReader);
+                treeNode.elements().forEachRemaining(jsonNodeFromTree -> {
+                    ObjectNode dataObject = objectMapper.createObjectNode();
+                    dataPathMap.forEach((key, value) -> {
+                        JsonNode dataFromNode = getNodeByPath(jsonNodeFromTree, value.getDataPath());
+                        Object objectValue;
+                        if (dataFromNode != null) {
+                            objectValue = convert(dataFromNode.asText(""), value.getDataType(), value.getFormatPattern());
+                            dataObject.putPOJO(value.getFieldName(), objectValue);
+                            log.info("node found: {}", dataFromNode);
+                        }
+                    });
+                    if (dataByCategory.getDataSection().equals("exercise")) {
+                        exerciseService.mapToExercises(userExercises, dataObject, exerciseIndex, existingUser.getId());
+                    }
+                });
             }
         }
+        exerciseService.save(userExercises);
         DataImportResponse dataImportResponse = new DataImportResponse();
-        dataImportResponse.setJsonArray(jsonArray.getJSONArray(21).toList());
         return dataImportResponse;
-    }
-
-    private List<Exercise> mapJsonArrayToExercise(JSONArray innerJsonArray, UUID userId) {
-        List<Exercise> exerciseList = new ArrayList<>();
-        if(!innerJsonArray.isEmpty()) {
-            innerJsonArray.forEach(object -> {
-                Exercise newExercise = objectMapper.convertValue(object, Exercise.class);
-                newExercise.setUserId(userId);
-                exerciseList.add(newExercise);
-            });
-        }
-        return exerciseList;
     }
 
     private JsonNode getNodeByPath(JsonNode jsonNode, String name) {
