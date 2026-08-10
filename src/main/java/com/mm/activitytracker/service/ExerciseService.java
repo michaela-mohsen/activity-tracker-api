@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Component
 public interface ExerciseService {
     List<Exercise> getExercisesByUserId(UUID userId);
     void save(List<Exercise> exercises);

@@ -97,7 +97,6 @@ public class DataServiceImpl implements DataService {
                         if (dataFromNode != null) {
                             objectValue = convert(dataFromNode.asText(""), value.getDataType(), value.getFormatPattern());
                             dataObject.putPOJO(value.getFieldName(), objectValue);
-                            log.info("node found: {}", dataFromNode);
                         }
                     });
                     if (dataByCategory.getDataSection().equals("exercise")) {

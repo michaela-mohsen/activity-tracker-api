@@ -9,9 +9,9 @@ import java.util.UUID;
 
 @Data
 @Entity
-@Table(name = "exercise", indexes = {
-        @Index(name = "idx_exercise_original_id", columnList = "original_id"),
-        @Index(name = "idx_exercise_user_id", columnList = "user_id")})
+@Table(name = "exercises", indexes = {
+        @Index(name = "idx_exercises_original_id", columnList = "original_id"),
+        @Index(name = "idx_exercises_user_id", columnList = "user_id")})
 public class Exercise {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
