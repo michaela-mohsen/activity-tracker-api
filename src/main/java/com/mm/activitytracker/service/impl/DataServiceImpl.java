@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mm.activitytracker.entity.*;
+import com.mm.activitytracker.exception.ResourceNotFoundException;
 import com.mm.activitytracker.model.Exercise;
 import com.mm.activitytracker.repository.SourcePlatformRepository;
 import com.mm.activitytracker.service.DataService;
@@ -16,6 +17,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
@@ -45,15 +47,14 @@ public class DataServiceImpl implements DataService {
     private ObjectMapper objectMapper;
 
     @Override
-    public DataImportResponse importData(MultipartFile file, Platform platform, UUID userId) throws IOException {
-        // file can be json, xml, or csv data
+    public DataImportResponse importData(MultipartFile file, Platform platform, UUID userId) throws IOException, MissingServletRequestParameterException {
         if (file.isEmpty()) {
-            log.error("file not provided");
-            throw new RuntimeException("file not provided");
+            log.error("File not provided");
+            throw new MissingServletRequestParameterException("file", "File not provided in request");
         }
         if (userId == null) {
             log.error("User id not provided");
-            throw new RuntimeException("User id not provided");
+            throw new MissingServletRequestParameterException("userId", "User id not provided in request");
         }
         User existingUser = userService.getUserById(userId);
         if (existingUser == null) {
@@ -63,7 +64,7 @@ public class DataServiceImpl implements DataService {
         SourcePlatform sourcePlatform = sourcePlatformRepository.findByPlatform(platform);
         if(sourcePlatform == null) {
             log.error("platform configuration not found");
-            throw new RuntimeException("platform configuration not found");
+            throw new ResourceNotFoundException("Platform configuration not found");
         }
         objectMapper.disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
         List<Exercise> userExercises = exerciseService.getExercisesByUserId(existingUser.getId());
@@ -104,6 +105,9 @@ public class DataServiceImpl implements DataService {
                     }
                 });
             }
+        } catch (IOException e) {
+            log.error("Error reading zip file: {}", e.getMessage());
+            throw new IOException("Error reading zip file: " + e.getMessage());
         }
         exerciseService.save(userExercises);
         DataImportResponse dataImportResponse = new DataImportResponse();

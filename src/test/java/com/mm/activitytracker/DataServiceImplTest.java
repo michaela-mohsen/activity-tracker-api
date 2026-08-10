@@ -20,6 +20,7 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -55,7 +56,7 @@ public class DataServiceImplTest {
     }
 
     @Test
-    void importData_shouldReturn200() throws IOException {
+    void importData_shouldReturn200() throws IOException, MissingServletRequestParameterException {
         MockMultipartFile mockMultipartFile = new MockMultipartFile("fitbit-mock-data.zip", resource.getContentAsByteArray());
         User mockUser = mockUser();
         Mockito.when(userService.getUserById(mockUserId)).thenReturn(mockUser);
