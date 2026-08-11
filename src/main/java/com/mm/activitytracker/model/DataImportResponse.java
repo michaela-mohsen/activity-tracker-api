@@ -1,6 +1,6 @@
-package com.mm.activitytracker.entity;
+package com.mm.activitytracker.model;
 
-import com.mm.activitytracker.model.Exercise;
+import com.mm.activitytracker.entity.postgres.Exercise;
 import lombok.Data;
 
 import java.util.List;

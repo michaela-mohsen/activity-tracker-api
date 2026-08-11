@@ -1,7 +1,7 @@
 package com.mm.activitytracker.service;
 
-import com.mm.activitytracker.entity.DataImportResponse;
-import com.mm.activitytracker.entity.Platform;
+import com.mm.activitytracker.model.DataImportResponse;
+import com.mm.activitytracker.entity.mongodb.Platform;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.multipart.MultipartFile;
 

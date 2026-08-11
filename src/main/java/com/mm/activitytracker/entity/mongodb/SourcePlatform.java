@@ -1,4 +1,4 @@
-package com.mm.activitytracker.entity;
+package com.mm.activitytracker.entity.mongodb;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;

@@ -1,10 +1,10 @@
 package com.mm.activitytracker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mm.activitytracker.entity.CollectedData;
-import com.mm.activitytracker.entity.Field;
-import com.mm.activitytracker.entity.Platform;
-import com.mm.activitytracker.entity.SourcePlatform;
+import com.mm.activitytracker.entity.mongodb.CollectedData;
+import com.mm.activitytracker.entity.mongodb.Field;
+import com.mm.activitytracker.entity.mongodb.Platform;
+import com.mm.activitytracker.entity.mongodb.SourcePlatform;
 import com.mm.activitytracker.repository.SourcePlatformRepository;
 import com.mm.activitytracker.service.ExerciseService;
 import com.mm.activitytracker.service.impl.DataServiceImpl;

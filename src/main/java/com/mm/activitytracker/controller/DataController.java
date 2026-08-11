@@ -1,7 +1,7 @@
 package com.mm.activitytracker.controller;
 
-import com.mm.activitytracker.entity.DataImportResponse;
-import com.mm.activitytracker.entity.Platform;
+import com.mm.activitytracker.model.DataImportResponse;
+import com.mm.activitytracker.entity.mongodb.Platform;
 import com.mm.activitytracker.service.impl.DataServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

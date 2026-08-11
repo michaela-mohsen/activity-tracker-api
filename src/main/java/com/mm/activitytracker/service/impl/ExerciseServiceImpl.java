@@ -2,7 +2,7 @@ package com.mm.activitytracker.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.mm.activitytracker.model.Exercise;
+import com.mm.activitytracker.entity.postgres.Exercise;
 import com.mm.activitytracker.repository.ExerciseRepository;
 import com.mm.activitytracker.service.ExerciseService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +21,12 @@ public class ExerciseServiceImpl implements ExerciseService {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Override
+    public Page<Exercise> getExercisesByUserId(UUID userId, Pageable pageable) {
+        Page<Exercise> userExercises = exerciseRepository.findByUserId(userId, pageable);
+        return userExercises;
+    }
 
     @Override
     public List<Exercise> getExercisesByUserId(UUID userId) {

@@ -1,4 +1,4 @@
-package com.mm.activitytracker.model;
+package com.mm.activitytracker.entity.postgres;
 
 import jakarta.persistence.*;
 import lombok.Data;
