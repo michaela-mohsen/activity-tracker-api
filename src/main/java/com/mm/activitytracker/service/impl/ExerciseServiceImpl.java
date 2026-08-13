@@ -3,8 +3,11 @@ package com.mm.activitytracker.service.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mm.activitytracker.entity.postgres.Exercise;
+import com.mm.activitytracker.entity.postgres.TimeDuration;
+import com.mm.activitytracker.model.ExerciseDto;
 import com.mm.activitytracker.repository.ExerciseRepository;
 import com.mm.activitytracker.service.ExerciseService;
+import com.mm.activitytracker.util.DurationUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -47,5 +50,17 @@ public class ExerciseServiceImpl implements ExerciseService {
             userExercises.add(newExercise);
             exerciseIndex.put(newExercise.getOriginalId(), newExercise);
         }
+    }
+
+    private ExerciseDto mapToDto(Exercise exercise) {
+        TimeDuration timeDuration = DurationUtil.millisecondsToTimeDuration(exercise.getDuration());
+        return ExerciseDto.builder()
+                .id(exercise.getId())
+                .exerciseStartDate(exercise.getExerciseStartDate().toString())
+                .duration(timeDuration)
+                .activity(exercise.getActivity())
+                .distanceUnit(exercise.getDistanceUnit().toString())
+                .totalCalories(exercise.getTotalCalories().intValue())
+                .build();
     }
 }
