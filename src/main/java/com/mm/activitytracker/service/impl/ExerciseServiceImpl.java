@@ -10,12 +10,12 @@ import com.mm.activitytracker.service.ExerciseService;
 import com.mm.activitytracker.util.DurationUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class ExerciseServiceImpl implements ExerciseService {
@@ -26,9 +26,10 @@ public class ExerciseServiceImpl implements ExerciseService {
     private ObjectMapper objectMapper;
 
     @Override
-    public Page<Exercise> getExercisesByUserId(UUID userId, Pageable pageable) {
+    public Page<ExerciseDto> getExercisesByUserId(UUID userId, Pageable pageable) {
         Page<Exercise> userExercises = exerciseRepository.findByUserId(userId, pageable);
-        return userExercises;
+        List<ExerciseDto> exerciseDtos = userExercises.getContent().stream().map(this::mapToDto).collect(Collectors.toList());
+        return new PageImpl<>(exerciseDtos, pageable, userExercises.getTotalElements());
     }
 
     @Override
@@ -61,6 +62,9 @@ public class ExerciseServiceImpl implements ExerciseService {
                 .activity(exercise.getActivity())
                 .distanceUnit(exercise.getDistanceUnit().toString())
                 .totalCalories(exercise.getTotalCalories().intValue())
+                .totalSteps(exercise.getTotalSteps().intValue())
+                .totalDistance(exercise.getTotalDistance().intValue())
+                .source(exercise.getSource())
                 .build();
     }
 }

@@ -27,4 +27,14 @@ public class DurationUtilTest {
         TimeDuration duration = DurationUtil.millisecondsToTimeDuration(BigDecimal.valueOf(1048000));
         Assertions.assertNotEquals(0, duration.getSeconds());
     }
+
+    @Test
+    void testTimeDurationToMilliseconds() {
+        TimeDuration duration = new TimeDuration();
+        duration.setHours(1);
+        duration.setMinutes(30);
+        duration.setSeconds(15);
+        BigDecimal milliseconds = DurationUtil.timeDurationToMilliseconds(duration);
+        Assertions.assertEquals(BigDecimal.valueOf(5415000), milliseconds);
+    }
 }

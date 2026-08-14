@@ -19,4 +19,15 @@ public class DurationUtil {
         timeDuration.setSeconds(seconds % 60);
         return timeDuration;
     }
+
+    public static BigDecimal timeDurationToMilliseconds(TimeDuration timeDuration) {
+        if(timeDuration == null) {
+            return BigDecimal.ZERO;
+        }
+        int hours = timeDuration.getHours() * 3600;
+        int minutes = timeDuration.getMinutes() * 60;
+        int seconds = timeDuration.getSeconds();
+        int totalMilliseconds = (hours + minutes + seconds) * 1000;
+        return BigDecimal.valueOf(totalMilliseconds);
+    }
 }
