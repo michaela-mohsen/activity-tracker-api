@@ -1,6 +1,7 @@
 package com.mm.activitytracker.entity.postgres;
 
 import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -8,6 +9,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Data
+@Builder
 @Entity
 @Table(name = "exercises", indexes = {
         @Index(name = "idx_exercises_user_id", columnList = "user_id")
