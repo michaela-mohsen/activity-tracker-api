@@ -16,5 +16,5 @@ public interface ExerciseService {
     Page<ExerciseDto> getExercisesByUserId(UUID userId, Pageable pageable);
     List<Exercise> getExercisesByUserId(UUID userId);
     void save(List<Exercise> exercises);
-    void mapToExercises(List<Exercise> userExercises, ObjectNode exerciseJson, Map<Long, Exercise> exerciseIndex, UUID userId);
+    void mapToExercises(String dataSection, List<Exercise> userExercises, ObjectNode exerciseJson, Map<Long, Exercise> exerciseIndex, UUID userId);
 }

@@ -19,7 +19,7 @@ import com.mm.user.core.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.multipart.MultipartFile;
@@ -38,17 +38,18 @@ import java.util.zip.ZipInputStream;
 @Slf4j
 @Service
 public class DataServiceImpl implements DataService {
-    @Autowired
-    private SourcePlatformRepository sourcePlatformRepository;
+    private final SourcePlatformRepository sourcePlatformRepository;
+    private final ExerciseService exerciseService;
+    private final UserService userService;
+    private final ObjectMapper objectMapper;
 
     @Autowired
-    private ExerciseService exerciseService;
-
-    @Autowired
-    private UserService userService;
-
-    @Autowired
-    private ObjectMapper objectMapper;
+    private DataServiceImpl(SourcePlatformRepository sourcePlatformRepository, ExerciseService exerciseService, UserService userService, ObjectMapper objectMapper) {
+        this.sourcePlatformRepository = sourcePlatformRepository;
+        this.exerciseService = exerciseService;
+        this.userService = userService;
+        this.objectMapper = objectMapper.disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
+    }
 
     @Override
     public DataImportResponse importData(MultipartFile file, Platform platform, UUID userId) throws IOException, MissingServletRequestParameterException {
@@ -63,34 +64,35 @@ public class DataServiceImpl implements DataService {
         User existingUser = userService.getUserById(userId);
         if (existingUser == null) {
             log.error("User not found");
-            throw new UsernameNotFoundException("User not found");
+            throw new BadCredentialsException("User not found");
         }
         SourcePlatform sourcePlatform = sourcePlatformRepository.findByPlatform(platform);
         if(sourcePlatform == null) {
             log.error("platform configuration not found");
             throw new ResourceNotFoundException("Platform configuration not found");
         }
-        objectMapper.disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
+        extractAndImport(file, platform, existingUser, sourcePlatform);
+        return new DataImportResponse();
+    }
+
+    private void extractAndImport(MultipartFile file, Platform platform, User existingUser, SourcePlatform sourcePlatform) throws IOException {
         List<Exercise> userExercises = exerciseService.getExercisesByUserId(existingUser.getId());
         Map<Long, Exercise> exerciseIndex = userExercises.stream()
                 .collect(Collectors.toMap(Exercise::getOriginalId, Function.identity()));
+
         Map<String, CollectedData> collectedDataMap = sourcePlatform.getCollectedData().stream().collect(Collectors.toMap(CollectedData::getDataSection, Function.identity()));
+
         try (ZipInputStream zipInputStream = new ZipInputStream(file.getInputStream(), StandardCharsets.UTF_8)) {
             ZipEntry entry;
             Set<String> filesToScan = Set.of(".json");
             while((entry = zipInputStream.getNextEntry()) != null) {
-                if(entry.isDirectory()) {
+                Optional<String> fileKey = getFileKey(entry, collectedDataMap, filesToScan);
+                if(entry.isDirectory() || fileKey.isEmpty()) {
                     zipInputStream.closeEntry();
                     continue;
                 }
-                String fileName = entry.getName();
-                String fileExtension = fileName.substring(fileName.lastIndexOf("."));
-                Optional<String> fileKey = collectedDataMap.keySet().stream().filter(fileName::contains).findFirst();
-                if (!filesToScan.contains(fileExtension) || fileKey.isEmpty()) {
-                    continue;
-                }
                 CollectedData dataByCategory = collectedDataMap.get(fileKey.get());
-                log.info("{} data section found in {}: {}", platform, fileName, dataByCategory.getDataSection());
+                log.info("{} data section found in {}: {}", platform, entry.getName(), dataByCategory.getDataSection());
                 Map<String, Field> dataPathMap = dataByCategory.getFields().stream().collect(Collectors.toMap(Field::getDataPath, Function.identity()));
                 InputStreamReader entryReader = new InputStreamReader(zipInputStream, StandardCharsets.UTF_8);
                 JsonNode treeNode = objectMapper.readTree(entryReader);
@@ -104,9 +106,7 @@ public class DataServiceImpl implements DataService {
                             dataObject.putPOJO(value.getFieldName(), objectValue);
                         }
                     });
-                    if (dataByCategory.getDataSection().equals("exercise")) {
-                        exerciseService.mapToExercises(userExercises, dataObject, exerciseIndex, existingUser.getId());
-                    }
+                    exerciseService.mapToExercises(dataByCategory.getDataSection(), userExercises, dataObject, exerciseIndex, existingUser.getId());
                 });
             }
         } catch (IOException e) {
@@ -114,8 +114,16 @@ public class DataServiceImpl implements DataService {
             throw new IOException("Error reading zip file: " + e.getMessage());
         }
         exerciseService.save(userExercises);
-        DataImportResponse dataImportResponse = new DataImportResponse();
-        return dataImportResponse;
+    }
+
+    private Optional<String> getFileKey(ZipEntry entry, Map<String, CollectedData> collectedDataMap, Set<String> filesToScan) {
+        String fileName = entry.getName();
+        String fileExtension = fileName.substring(fileName.lastIndexOf("."));
+        Optional<String> fileKey = collectedDataMap.keySet().stream().filter(fileName::contains).findFirst();
+        if (!filesToScan.contains(fileExtension) || fileKey.isEmpty()) {
+            return Optional.empty();
+        }
+        return fileKey;
     }
 
     private JsonNode getNodeByPath(JsonNode jsonNode, String name) {

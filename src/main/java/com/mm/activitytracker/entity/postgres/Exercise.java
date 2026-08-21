@@ -1,8 +1,10 @@
 package com.mm.activitytracker.entity.postgres;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -14,6 +16,8 @@ import java.util.UUID;
 @Table(name = "exercises", indexes = {
         @Index(name = "idx_exercises_user_id", columnList = "user_id")
 })
+@NoArgsConstructor
+@AllArgsConstructor
 public class Exercise {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)

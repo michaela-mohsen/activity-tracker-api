@@ -43,14 +43,18 @@ public class ExerciseServiceImpl implements ExerciseService {
     }
 
     @Override
-    public void mapToExercises(List<Exercise> userExercises, ObjectNode exerciseJson, Map<Long, Exercise> exerciseIndex, UUID userId) {
+    public void mapToExercises(String dataSection, List<Exercise> userExercises, ObjectNode exerciseJson, Map<Long, Exercise> exerciseIndex, UUID userId) {
+        if (!dataSection.equals("exercise")) {
+            return;
+        }
         Exercise newExercise = objectMapper.convertValue(exerciseJson, Exercise.class);
         Exercise existingExercise = exerciseIndex.get(newExercise.getOriginalId());
-        if (existingExercise == null) {
-            newExercise.setUserId(userId);
-            userExercises.add(newExercise);
-            exerciseIndex.put(newExercise.getOriginalId(), newExercise);
+        if (existingExercise != null) {
+            return;
         }
+        newExercise.setUserId(userId);
+        userExercises.add(newExercise);
+        exerciseIndex.put(newExercise.getOriginalId(), newExercise);
     }
 
     private ExerciseDto mapToDto(Exercise exercise) {
