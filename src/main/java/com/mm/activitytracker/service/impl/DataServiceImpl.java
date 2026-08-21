@@ -8,12 +8,14 @@ import com.mm.activitytracker.entity.mongodb.CollectedData;
 import com.mm.activitytracker.entity.mongodb.Field;
 import com.mm.activitytracker.entity.mongodb.Platform;
 import com.mm.activitytracker.entity.mongodb.SourcePlatform;
+import com.mm.activitytracker.entity.postgres.Sleep;
 import com.mm.activitytracker.exception.ResourceNotFoundException;
 import com.mm.activitytracker.entity.postgres.Exercise;
 import com.mm.activitytracker.model.DataImportResponse;
 import com.mm.activitytracker.repository.SourcePlatformRepository;
 import com.mm.activitytracker.service.DataService;
 import com.mm.activitytracker.service.ExerciseService;
+import com.mm.activitytracker.service.SleepService;
 import com.mm.user.core.entity.User;
 import com.mm.user.core.service.UserService;
 import lombok.extern.slf4j.Slf4j;
@@ -40,13 +42,15 @@ import java.util.zip.ZipInputStream;
 public class DataServiceImpl implements DataService {
     private final SourcePlatformRepository sourcePlatformRepository;
     private final ExerciseService exerciseService;
+    private final SleepService sleepService;
     private final UserService userService;
     private final ObjectMapper objectMapper;
 
     @Autowired
-    private DataServiceImpl(SourcePlatformRepository sourcePlatformRepository, ExerciseService exerciseService, UserService userService, ObjectMapper objectMapper) {
+    private DataServiceImpl(SourcePlatformRepository sourcePlatformRepository, ExerciseService exerciseService, SleepService sleepService, UserService userService, ObjectMapper objectMapper) {
         this.sourcePlatformRepository = sourcePlatformRepository;
         this.exerciseService = exerciseService;
+        this.sleepService = sleepService;
         this.userService = userService;
         this.objectMapper = objectMapper.disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
     }
@@ -79,6 +83,9 @@ public class DataServiceImpl implements DataService {
         List<Exercise> userExercises = exerciseService.getExercisesByUserId(existingUser.getId());
         Map<Long, Exercise> exerciseIndex = userExercises.stream()
                 .collect(Collectors.toMap(Exercise::getOriginalId, Function.identity()));
+        List<Sleep> userSleepList = sleepService.getSleepByUserId(existingUser.getId());
+        Map<Long, Sleep> sleepIndex = userSleepList.stream()
+                .collect(Collectors.toMap(Sleep::getOriginalId, Function.identity()));
 
         Map<String, CollectedData> collectedDataMap = sourcePlatform.getCollectedData().stream().collect(Collectors.toMap(CollectedData::getDataSection, Function.identity()));
 
@@ -107,12 +114,14 @@ public class DataServiceImpl implements DataService {
                         }
                     });
                     exerciseService.mapToExercises(dataByCategory.getDataSection(), userExercises, dataObject, exerciseIndex, existingUser.getId());
+                    sleepService.mapToSleep(dataByCategory.getDataSection(), userSleepList, dataObject, sleepIndex, existingUser.getId());
                 });
             }
         } catch (IOException e) {
             log.error("Error reading zip file: {}", e.getMessage());
             throw new IOException("Error reading zip file: " + e.getMessage());
         }
+        sleepService.save(userSleepList);
         exerciseService.save(userExercises);
     }
 
