@@ -52,7 +52,7 @@ public class DataServiceImpl implements DataService {
         this.exerciseService = exerciseService;
         this.sleepService = sleepService;
         this.userService = userService;
-        this.objectMapper = objectMapper.disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -94,7 +94,7 @@ public class DataServiceImpl implements DataService {
             Set<String> filesToScan = Set.of(".json");
             while((entry = zipInputStream.getNextEntry()) != null) {
                 Optional<String> fileKey = getFileKey(entry, collectedDataMap, filesToScan);
-                if(entry.isDirectory() || fileKey.isEmpty()) {
+                if(fileKey.isEmpty()) {
                     zipInputStream.closeEntry();
                     continue;
                 }
@@ -126,6 +126,9 @@ public class DataServiceImpl implements DataService {
     }
 
     private Optional<String> getFileKey(ZipEntry entry, Map<String, CollectedData> collectedDataMap, Set<String> filesToScan) {
+        if (entry.isDirectory()) {
+            return Optional.empty();
+        }
         String fileName = entry.getName();
         String fileExtension = fileName.substring(fileName.lastIndexOf("."));
         Optional<String> fileKey = collectedDataMap.keySet().stream().filter(fileName::contains).findFirst();
@@ -160,6 +163,7 @@ public class DataServiceImpl implements DataService {
                 LocalDateTime localDateTime = LocalDateTime.parse(data);
                 yield localDateTime.atOffset(ZoneOffset.of("Z"));
             }
+            case "localdate" -> LocalDate.parse(data);
             case "timestamp" -> OffsetDateTime.parse(data);
             case "number", "double" -> new BigDecimal(data);
             default -> data.toUpperCase();

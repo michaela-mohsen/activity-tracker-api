@@ -1,5 +1,6 @@
 package com.mm.activitytracker;
 
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mm.activitytracker.entity.postgres.DistanceUnit;
 import com.mm.activitytracker.entity.postgres.Exercise;
@@ -31,7 +32,8 @@ public class ExerciseServiceImplTest {
 
     @Spy
     private ObjectMapper objectMapper = new ObjectMapper()
-            .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+            .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule())
+            .disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
 
     @InjectMocks
     private ExerciseServiceImpl service;
