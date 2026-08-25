@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -47,4 +48,10 @@ public class Sleep {
 
     @Column(name =  "user_id")
     private UUID userId;
+
+    @Column(name="sleep_date")
+    private LocalDate sleepDate;
+
+    @Column
+    private String platform;
 }

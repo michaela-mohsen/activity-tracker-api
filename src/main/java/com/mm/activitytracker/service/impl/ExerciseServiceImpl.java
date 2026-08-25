@@ -2,6 +2,7 @@ package com.mm.activitytracker.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.mm.activitytracker.entity.mongodb.Platform;
 import com.mm.activitytracker.entity.postgres.Exercise;
 import com.mm.activitytracker.entity.postgres.TimeDuration;
 import com.mm.activitytracker.model.ExerciseDto;
@@ -38,12 +39,17 @@ public class ExerciseServiceImpl implements ExerciseService {
     }
 
     @Override
+    public List<Exercise> getExercisesByUserIdAndPlatform(UUID userId, Platform platform) {
+        return exerciseRepository.findByUserIdAndPlatform(userId, platform.toString());
+    }
+
+    @Override
     public void save(List<Exercise> exercises) {
         exerciseRepository.saveAll(exercises);
     }
 
     @Override
-    public void mapToExercises(String dataSection, List<Exercise> userExercises, ObjectNode exerciseJson, Map<Long, Exercise> exerciseIndex, UUID userId) {
+    public void mapToExercises(String dataSection, List<Exercise> userExercises, ObjectNode exerciseJson, Map<Long, Exercise> exerciseIndex, UUID userId, Platform platform) {
         if (!dataSection.equals("exercise")) {
             return;
         }
@@ -52,6 +58,7 @@ public class ExerciseServiceImpl implements ExerciseService {
         if (existingExercise != null) {
             return;
         }
+        newExercise.setPlatform(platform.toString());
         newExercise.setUserId(userId);
         userExercises.add(newExercise);
         exerciseIndex.put(newExercise.getOriginalId(), newExercise);

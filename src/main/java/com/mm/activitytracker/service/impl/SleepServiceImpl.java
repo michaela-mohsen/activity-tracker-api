@@ -2,6 +2,7 @@ package com.mm.activitytracker.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.mm.activitytracker.entity.mongodb.Platform;
 import com.mm.activitytracker.entity.postgres.Sleep;
 import com.mm.activitytracker.repository.SleepRepository;
 import com.mm.activitytracker.service.SleepService;
@@ -33,7 +34,12 @@ public class SleepServiceImpl implements SleepService {
     }
 
     @Override
-    public void mapToSleep(String dataSection, List<Sleep> sleepList, ObjectNode sleepJson, Map<Long, Sleep> sleepIndex, UUID userId) {
+    public List<Sleep> getSleepByUserIdAndPlatform(UUID userId, Platform platform) {
+        return sleepRepository.findByUserIdAndPlatform(userId, platform.toString());
+    }
+
+    @Override
+    public void mapToSleep(String dataSection, List<Sleep> sleepList, ObjectNode sleepJson, Map<Long, Sleep> sleepIndex, UUID userId, Platform platform) {
         if (!dataSection.equals("sleep")) {
             return;
         }
@@ -43,6 +49,7 @@ public class SleepServiceImpl implements SleepService {
             return;
         }
         newSleep.setUserId(userId);
+        newSleep.setPlatform(platform.toString());
         sleepList.add(newSleep);
         sleepIndex.put(newSleep.getOriginalId(), newSleep);
     }

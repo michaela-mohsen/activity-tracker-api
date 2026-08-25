@@ -80,10 +80,10 @@ public class DataServiceImpl implements DataService {
     }
 
     private void extractAndImport(MultipartFile file, Platform platform, User existingUser, SourcePlatform sourcePlatform) throws IOException {
-        List<Exercise> userExercises = exerciseService.getExercisesByUserId(existingUser.getId());
+        List<Exercise> userExercises = exerciseService.getExercisesByUserIdAndPlatform(existingUser.getId(), platform);
         Map<Long, Exercise> exerciseIndex = userExercises.stream()
                 .collect(Collectors.toMap(Exercise::getOriginalId, Function.identity()));
-        List<Sleep> userSleepList = sleepService.getSleepByUserId(existingUser.getId());
+        List<Sleep> userSleepList = sleepService.getSleepByUserIdAndPlatform(existingUser.getId(), platform);
         Map<Long, Sleep> sleepIndex = userSleepList.stream()
                 .collect(Collectors.toMap(Sleep::getOriginalId, Function.identity()));
 
@@ -113,8 +113,8 @@ public class DataServiceImpl implements DataService {
                             dataObject.putPOJO(value.getFieldName(), objectValue);
                         }
                     });
-                    exerciseService.mapToExercises(dataByCategory.getDataSection(), userExercises, dataObject, exerciseIndex, existingUser.getId());
-                    sleepService.mapToSleep(dataByCategory.getDataSection(), userSleepList, dataObject, sleepIndex, existingUser.getId());
+                    exerciseService.mapToExercises(dataByCategory.getDataSection(), userExercises, dataObject, exerciseIndex, existingUser.getId(), platform);
+                    sleepService.mapToSleep(dataByCategory.getDataSection(), userSleepList, dataObject, sleepIndex, existingUser.getId(), platform);
                 });
             }
         } catch (IOException e) {

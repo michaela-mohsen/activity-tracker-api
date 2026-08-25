@@ -75,8 +75,8 @@ public class DataServiceImplTest {
         when(sourcePlatformRepository.findByPlatform(Platform.FITBIT)).thenReturn(fitbitPlatform);
         when(exerciseService.getExercisesByUserId(mockUserId)).thenReturn(new ArrayList<>());
         when(sleepService.getSleepByUserId(mockUserId)).thenReturn(new ArrayList<>());
-        doNothing().when(exerciseService).mapToExercises(anyString(), any(), any(), any(), any());
-        doNothing().when(sleepService).mapToSleep(any(), any(), any(), any(), any());
+        doNothing().when(exerciseService).mapToExercises(anyString(), any(), any(), any(), any(), any());
+        doNothing().when(sleepService).mapToSleep(any(), any(), any(), any(), any(), any());
         Assertions.assertNotNull(dataService.importData(mockMultipartFile, Platform.FITBIT, mockUserId));
     }
 

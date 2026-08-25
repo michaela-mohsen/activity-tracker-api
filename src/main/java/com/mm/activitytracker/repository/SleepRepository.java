@@ -8,4 +8,5 @@ import java.util.UUID;
 
 public interface SleepRepository extends JpaRepository<Sleep, Long> {
     List<Sleep> findByUserId(UUID userId);
+    List<Sleep> findByUserIdAndPlatform(UUID userId, String platform);
 }

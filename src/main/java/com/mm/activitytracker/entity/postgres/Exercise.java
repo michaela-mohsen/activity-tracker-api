@@ -52,4 +52,7 @@ public class Exercise {
 
     @Column(name = "user_id")
     private UUID userId;
+
+    @Column
+    private String platform;
 }
