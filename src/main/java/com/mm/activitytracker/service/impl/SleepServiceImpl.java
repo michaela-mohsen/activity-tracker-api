@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -39,7 +40,7 @@ public class SleepServiceImpl implements SleepService {
     }
 
     @Override
-    public void mapToSleep(String dataSection, List<Sleep> sleepList, ObjectNode sleepJson, Map<Long, Sleep> sleepIndex, UUID userId, Platform platform) {
+    public void mapToSleep(String dataSection, List<Sleep> sleepList, ObjectNode sleepJson, Map<Long, Sleep> sleepIndex, UUID userId, Platform platform, ZoneId zoneId) {
         if (!dataSection.equals("sleep")) {
             return;
         }
@@ -50,6 +51,7 @@ public class SleepServiceImpl implements SleepService {
         }
         newSleep.setUserId(userId);
         newSleep.setPlatform(platform.toString());
+        newSleep.setZoneId(zoneId.getId());
         sleepList.add(newSleep);
         sleepIndex.put(newSleep.getOriginalId(), newSleep);
     }

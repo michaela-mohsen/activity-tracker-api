@@ -1,6 +1,5 @@
 package com.mm.activitytracker.service.impl;
 
-import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -56,7 +55,7 @@ public class DataServiceImpl implements DataService {
     }
 
     @Override
-    public DataImportResponse importData(MultipartFile file, Platform platform, UUID userId) throws IOException, MissingServletRequestParameterException {
+    public DataImportResponse importData(MultipartFile file, Platform platform, UUID userId, String userTimeZone) throws IOException, MissingServletRequestParameterException {
         if (file.isEmpty()) {
             log.error("File not provided");
             throw new MissingServletRequestParameterException("file", "File not provided in request");
@@ -75,18 +74,18 @@ public class DataServiceImpl implements DataService {
             log.error("platform configuration not found");
             throw new ResourceNotFoundException("Platform configuration not found");
         }
-        extractAndImport(file, platform, existingUser, sourcePlatform);
+        extractAndImport(file, platform, existingUser, sourcePlatform, userTimeZone);
         return new DataImportResponse();
     }
 
-    private void extractAndImport(MultipartFile file, Platform platform, User existingUser, SourcePlatform sourcePlatform) throws IOException {
+    private void extractAndImport(MultipartFile file, Platform platform, User existingUser, SourcePlatform sourcePlatform, String userTimeZone) throws IOException {
         List<Exercise> userExercises = exerciseService.getExercisesByUserIdAndPlatform(existingUser.getId(), platform);
         Map<Long, Exercise> exerciseIndex = userExercises.stream()
                 .collect(Collectors.toMap(Exercise::getOriginalId, Function.identity()));
         List<Sleep> userSleepList = sleepService.getSleepByUserIdAndPlatform(existingUser.getId(), platform);
         Map<Long, Sleep> sleepIndex = userSleepList.stream()
                 .collect(Collectors.toMap(Sleep::getOriginalId, Function.identity()));
-
+        ZoneId zoneId = ZoneId.of(userTimeZone);
         Map<String, CollectedData> collectedDataMap = sourcePlatform.getCollectedData().stream().collect(Collectors.toMap(CollectedData::getDataSection, Function.identity()));
 
         try (ZipInputStream zipInputStream = new ZipInputStream(file.getInputStream(), StandardCharsets.UTF_8)) {
@@ -109,12 +108,12 @@ public class DataServiceImpl implements DataService {
                         JsonNode dataFromNode = getNodeByPath(jsonNodeFromTree, value.getDataPath());
                         Object objectValue;
                         if (dataFromNode != null) {
-                            objectValue = convert(dataFromNode.asText(""), value.getDataType(), value.getFormatPattern());
+                            objectValue = convert(dataFromNode.asText(""), value.getDataType(), value.getFormatPattern(), zoneId);
                             dataObject.putPOJO(value.getFieldName(), objectValue);
                         }
                     });
-                    exerciseService.mapToExercises(dataByCategory.getDataSection(), userExercises, dataObject, exerciseIndex, existingUser.getId(), platform);
-                    sleepService.mapToSleep(dataByCategory.getDataSection(), userSleepList, dataObject, sleepIndex, existingUser.getId(), platform);
+                    exerciseService.mapToExercises(dataByCategory.getDataSection(), userExercises, dataObject, exerciseIndex, existingUser.getId(), platform, zoneId);
+                    sleepService.mapToSleep(dataByCategory.getDataSection(), userSleepList, dataObject, sleepIndex, existingUser.getId(), platform, zoneId);
                 });
             }
         } catch (IOException e) {
@@ -149,7 +148,7 @@ public class DataServiceImpl implements DataService {
         return currentNode;
     }
 
-    private Object convert(String data, String dataType, String formatPattern) {
+    private Object convert(String data, String dataType, String formatPattern, ZoneId zoneId) {
         if (StringUtils.isBlank(data)) {
             return null;
         }
@@ -157,14 +156,15 @@ public class DataServiceImpl implements DataService {
             case "datetime" -> {
                 DateTimeFormatter customFormatter = DateTimeFormatter.ofPattern(formatPattern, Locale.US);
                 LocalDateTime localDateTime = LocalDateTime.parse(data, customFormatter);
-                yield localDateTime.atOffset(ZoneOffset.of("Z"));
+                ZoneOffset offset = zoneId.getRules().getOffset(localDateTime);
+                yield localDateTime.atOffset(offset);
             }
             case "localdatetime" -> {
                 LocalDateTime localDateTime = LocalDateTime.parse(data);
-                yield localDateTime.atOffset(ZoneOffset.of("Z"));
+                ZoneOffset offset = zoneId.getRules().getOffset(localDateTime);
+                yield localDateTime.atOffset(offset);
             }
             case "localdate" -> LocalDate.parse(data);
-            case "timestamp" -> OffsetDateTime.parse(data);
             case "number", "double" -> new BigDecimal(data);
             default -> data.toUpperCase();
         };

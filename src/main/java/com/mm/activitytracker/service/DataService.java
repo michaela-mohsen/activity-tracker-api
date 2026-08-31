@@ -9,5 +9,5 @@ import java.io.IOException;
 import java.util.UUID;
 
 public interface DataService {
-    DataImportResponse importData(MultipartFile file, Platform platform, UUID userId) throws IOException, MissingServletRequestParameterException;
+    DataImportResponse importData(MultipartFile file, Platform platform, UUID userId, String userTimeZone) throws IOException, MissingServletRequestParameterException;
 }

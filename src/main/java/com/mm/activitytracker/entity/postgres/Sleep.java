@@ -5,8 +5,12 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -15,10 +19,12 @@ import java.util.UUID;
 @Builder
 @Entity
 @Table(name = "sleep", indexes = {
-        @Index(name = "idx_sleep_user_id", columnList = "user_id")
+        @Index(name = "idx_sleep_user_id", columnList = "user_id"),
+        @Index(name = "idx_sleep_platform_user_id", columnList = "platform, user_id")
 })
 @NoArgsConstructor
 @AllArgsConstructor
+@EntityListeners(AuditingEntityListener.class)
 public class Sleep {
 
     @Id
@@ -43,6 +49,9 @@ public class Sleep {
     @Column(name = "sleep_end_date")
     private OffsetDateTime sleepEndDate;
 
+    @Column(name = "zone_id")
+    private String zoneId;
+
     @Column
     private BigDecimal duration;
 
@@ -54,4 +63,12 @@ public class Sleep {
 
     @Column
     private String platform;
+
+    @CreatedDate
+    @Column(name =  "created_date", updatable = false, nullable = false)
+    private Instant createdDate;
+
+    @LastModifiedDate
+    @Column(name = "last_modified_date", nullable = false)
+    private Instant lastModifiedDate;
 }

@@ -15,6 +15,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -49,7 +50,7 @@ public class ExerciseServiceImpl implements ExerciseService {
     }
 
     @Override
-    public void mapToExercises(String dataSection, List<Exercise> userExercises, ObjectNode exerciseJson, Map<Long, Exercise> exerciseIndex, UUID userId, Platform platform) {
+    public void mapToExercises(String dataSection, List<Exercise> userExercises, ObjectNode exerciseJson, Map<Long, Exercise> exerciseIndex, UUID userId, Platform platform, ZoneId zoneId) {
         if (!dataSection.equals("exercise")) {
             return;
         }
@@ -60,6 +61,7 @@ public class ExerciseServiceImpl implements ExerciseService {
         }
         newExercise.setPlatform(platform.toString());
         newExercise.setUserId(userId);
+        newExercise.setZoneId(zoneId.getId());
         userExercises.add(newExercise);
         exerciseIndex.put(newExercise.getOriginalId(), newExercise);
     }

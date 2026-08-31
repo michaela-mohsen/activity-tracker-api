@@ -23,10 +23,10 @@ public class DataController {
     private DataServiceImpl dataService;
 
     @PostMapping(path = "/import")
-    public ResponseEntity<?> importData(@RequestPart("file") MultipartFile file, @RequestParam(required = false) Platform platform, @RequestParam(required = false) UUID userId) throws IOException {
+    public ResponseEntity<?> importData(@RequestPart("file") MultipartFile file, @RequestParam Platform platform, @RequestParam UUID userId, @RequestParam String userTimeZone) throws IOException {
         try {
-            log.info("file: {}, source platform: {}, user id: {}", file.getName(), platform, userId.toString());
-            DataImportResponse dataImportResponse = dataService.importData(file, platform, userId);
+            log.info("file: {}, source platform: {}", file.getName(), platform);
+            DataImportResponse dataImportResponse = dataService.importData(file, platform, userId, userTimeZone);
             return new ResponseEntity<>(dataImportResponse, HttpStatus.OK);
         } catch (MissingServletRequestParameterException missingParameterException) {
             log.error("Error accepting request: {}", missingParameterException.getMessage());
