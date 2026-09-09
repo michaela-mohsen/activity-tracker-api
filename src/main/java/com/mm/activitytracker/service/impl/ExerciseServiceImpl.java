@@ -15,10 +15,12 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class ExerciseServiceImpl implements ExerciseService {
@@ -31,7 +33,7 @@ public class ExerciseServiceImpl implements ExerciseService {
     @Override
     public Page<ExerciseDto> getExercisesByUserId(UUID userId, Pageable pageable) {
         Page<Exercise> userExercises = exerciseRepository.findByUserId(userId, pageable);
-        List<ExerciseDto> exerciseDtos = userExercises.getContent().stream().map(this::mapToDto).collect(Collectors.toList());
+        List<ExerciseDto> exerciseDtos = userExercises.getContent().stream().map(this::mapToDto).toList();
         return new PageImpl<>(exerciseDtos, pageable, userExercises.getTotalElements());
     }
 
@@ -69,7 +71,7 @@ public class ExerciseServiceImpl implements ExerciseService {
 
     private ExerciseDto mapToDto(Exercise exercise) {
         TimeDuration timeDuration = DurationUtil.millisecondsToTimeDuration(exercise.getDuration());
-        String exerciseStartDate = getExerciseStartDate(exercise);
+        String exerciseStartDate = getExerciseStartDate(exercise.getZoneId(), exercise.getExerciseStartDate());
         return ExerciseDto.builder()
                 .id(exercise.getId())
                 .exerciseStartDate(exerciseStartDate)
@@ -83,10 +85,9 @@ public class ExerciseServiceImpl implements ExerciseService {
                 .build();
     }
 
-    private static String getExerciseStartDate(Exercise exercise) {
-        String zoneId = exercise.getZoneId();
+    private static String getExerciseStartDate(String zoneId, OffsetDateTime offsetDateTime) {
         ZoneId zone = ZoneId.of(zoneId);
-        return exercise.getExerciseStartDate()
+        return offsetDateTime
                 .toInstant()
                 .atZone(zone)
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));

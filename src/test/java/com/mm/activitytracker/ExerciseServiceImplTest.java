@@ -43,7 +43,7 @@ public class ExerciseServiceImplTest {
         UUID userId = UUID.randomUUID();
         List<Exercise> userExercisesList = existingExercises(userId);
         Page<Exercise> exercises = new PageImpl<>(userExercisesList);
-        Pageable pageable = PageRequest.of(0, 10);
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("exerciseStartDate").descending());
         when(repository.findByUserId(userId, pageable)).thenReturn(exercises);
         Page<ExerciseDto> page = service.getExercisesByUserId(userId, pageable);
         Assertions.assertEquals(1, page.getTotalPages());
@@ -53,7 +53,7 @@ public class ExerciseServiceImplTest {
         Exercise walkExercise = Exercise.builder()
                 .id(UUID.randomUUID())
                 .originalId(70058432687L)
-                .exerciseStartDate(OffsetDateTime.of(2025, 4, 28, 15, 44, 16, 0, ZoneOffset.of("+03:00")))
+                .exerciseStartDate(OffsetDateTime.parse("2025-11-28T20:02:58Z"))
                 .duration(BigDecimal.valueOf(60))
                 .activity("WALK")
                 .distanceUnit(DistanceUnit.MILE)
@@ -62,12 +62,13 @@ public class ExerciseServiceImplTest {
                 .totalDistance(BigDecimal.valueOf(0.460931))
                 .source("CHARGE 6")
                 .userId(userId)
+                .zoneId("America/New_York")
                 .build();
 
         Exercise treadmillExercise = Exercise.builder()
                 .id(UUID.randomUUID())
                 .originalId(70207895609L)
-                .exerciseStartDate(OffsetDateTime.of(2025, 5, 5, 14, 38, 27, 0, ZoneOffset.of("+03:00")))
+                .exerciseStartDate(OffsetDateTime.parse("2025-10-31T21:57:23Z"))
                 .duration(BigDecimal.valueOf(938000))
                 .activity("TREADMILL")
                 .distanceUnit(DistanceUnit.MILE)
@@ -76,6 +77,7 @@ public class ExerciseServiceImplTest {
                 .totalDistance(BigDecimal.valueOf(0.602114))
                 .source("CHARGE 6")
                 .userId(userId)
+                .zoneId("America/New_York")
                 .build();
         return List.of(walkExercise, treadmillExercise);
     }

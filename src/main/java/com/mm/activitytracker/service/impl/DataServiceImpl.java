@@ -36,6 +36,8 @@ import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import static java.time.ZoneOffset.UTC;
+
 @Slf4j
 @Service
 public class DataServiceImpl implements DataService {
@@ -155,14 +157,12 @@ public class DataServiceImpl implements DataService {
         return switch (dataType) {
             case "datetime" -> {
                 DateTimeFormatter customFormatter = DateTimeFormatter.ofPattern(formatPattern, Locale.US);
-                LocalDateTime localDateTime = LocalDateTime.parse(data, customFormatter);
-                ZoneOffset offset = zoneId.getRules().getOffset(localDateTime);
-                yield localDateTime.atOffset(offset);
+                ZonedDateTime zonedDateTime = LocalDateTime.parse(data, customFormatter).atZone(UTC);
+                yield zonedDateTime.toOffsetDateTime();
             }
             case "localdatetime" -> {
-                LocalDateTime localDateTime = LocalDateTime.parse(data);
-                ZoneOffset offset = zoneId.getRules().getOffset(localDateTime);
-                yield localDateTime.atOffset(offset);
+                ZonedDateTime zonedDateTime = LocalDateTime.parse(data).atZone(UTC);
+                yield zonedDateTime.toOffsetDateTime();
             }
             case "localdate" -> LocalDate.parse(data);
             case "number", "double" -> new BigDecimal(data);
