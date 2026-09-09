@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface ExerciseRepository extends JpaRepository<Exercise, String> {
-    Exercise findByOriginalId(long originalId);
     List<Exercise> findByUserId(UUID userId);
     Page<Exercise> findByUserId(UUID userId, Pageable pageable);
     List<Exercise> findByUserIdAndPlatform(UUID userId, String platform);

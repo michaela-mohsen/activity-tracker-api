@@ -14,8 +14,8 @@ public class ExerciseDto {
     private TimeDuration duration;
     private String activity;
     private String distanceUnit;
-    private int totalCalories;
-    private int totalSteps;
-    private int totalDistance;
+    private Integer totalCalories;
+    private Integer totalSteps;
+    private Integer totalDistance;
     private String source;
 }

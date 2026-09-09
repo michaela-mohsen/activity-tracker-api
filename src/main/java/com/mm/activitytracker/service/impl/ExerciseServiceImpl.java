@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -68,16 +69,26 @@ public class ExerciseServiceImpl implements ExerciseService {
 
     private ExerciseDto mapToDto(Exercise exercise) {
         TimeDuration timeDuration = DurationUtil.millisecondsToTimeDuration(exercise.getDuration());
+        String exerciseStartDate = getExerciseStartDate(exercise);
         return ExerciseDto.builder()
                 .id(exercise.getId())
-                .exerciseStartDate(exercise.getExerciseStartDate().toString())
+                .exerciseStartDate(exerciseStartDate)
                 .duration(timeDuration)
                 .activity(exercise.getActivity())
-                .distanceUnit(exercise.getDistanceUnit().toString())
-                .totalCalories(exercise.getTotalCalories().intValue())
-                .totalSteps(exercise.getTotalSteps().intValue())
-                .totalDistance(exercise.getTotalDistance().intValue())
+                .distanceUnit(exercise.getDistanceUnit() != null ? exercise.getDistanceUnit().toString() : null)
+                .totalCalories(exercise.getTotalCalories() != null ? exercise.getTotalCalories().intValue() : null)
+                .totalSteps(exercise.getTotalSteps() != null ? exercise.getTotalSteps().intValue() : null)
+                .totalDistance(exercise.getTotalDistance() != null ? exercise.getTotalDistance().intValue() : null)
                 .source(exercise.getSource())
                 .build();
+    }
+
+    private static String getExerciseStartDate(Exercise exercise) {
+        String zoneId = exercise.getZoneId();
+        ZoneId zone = ZoneId.of(zoneId);
+        return exercise.getExerciseStartDate()
+                .toInstant()
+                .atZone(zone)
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
     }
 }
