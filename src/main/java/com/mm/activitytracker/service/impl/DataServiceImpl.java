@@ -161,8 +161,8 @@ public class DataServiceImpl implements DataService {
                 yield zonedDateTime.toOffsetDateTime();
             }
             case "localdatetime" -> {
-                ZonedDateTime zonedDateTime = LocalDateTime.parse(data).atZone(UTC);
-                yield zonedDateTime.toOffsetDateTime();
+                ZonedDateTime zonedDateTime = LocalDateTime.parse(data).atZone(zoneId);
+                yield zonedDateTime.withZoneSameLocal(UTC).toOffsetDateTime();
             }
             case "localdate" -> LocalDate.parse(data);
             case "number", "double" -> new BigDecimal(data);
