@@ -4,12 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mm.activitytracker.entity.mongodb.Platform;
 import com.mm.activitytracker.entity.postgres.Sleep;
-import com.mm.activitytracker.entity.postgres.TimeDuration;
 import com.mm.activitytracker.model.SleepDto;
 import com.mm.activitytracker.model.SleepMinutes;
 import com.mm.activitytracker.repository.SleepRepository;
 import com.mm.activitytracker.service.SleepService;
-import com.mm.activitytracker.util.DurationUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -71,13 +69,12 @@ public class SleepServiceImpl implements SleepService {
         SleepMinutes sleepMinutes = createSleepMinutes(sleep);
         String sleepStartDate = getFormattedZoneDateTime(sleep.getZoneId(), sleep.getSleepStartDate());
         String sleepEndDate = getFormattedZoneDateTime(sleep.getZoneId(), sleep.getSleepEndDate());
-        TimeDuration duration = DurationUtil.millisecondsToTimeDuration(sleep.getDuration());
         return SleepDto.builder()
                 .uuid(sleep.getId())
                 .sleepMinutes(sleepMinutes)
                 .sleepStartDate(sleepStartDate)
                 .sleepEndDate(sleepEndDate)
-                .duration(duration)
+                .duration(sleep.getDuration() != null ? sleep.getDuration().longValue() : null)
                 .sleepDate(sleep.getSleepDate().toString())
                 .platform(sleep.getPlatform())
                 .build();

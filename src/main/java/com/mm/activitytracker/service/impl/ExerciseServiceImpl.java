@@ -4,21 +4,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mm.activitytracker.entity.mongodb.Platform;
 import com.mm.activitytracker.entity.postgres.Exercise;
-import com.mm.activitytracker.entity.postgres.TimeDuration;
+import com.mm.activitytracker.model.DataPage;
 import com.mm.activitytracker.model.ExerciseDto;
 import com.mm.activitytracker.repository.ExerciseRepository;
 import com.mm.activitytracker.service.ExerciseService;
-import com.mm.activitytracker.util.DurationUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -31,10 +27,16 @@ public class ExerciseServiceImpl implements ExerciseService {
     private ObjectMapper objectMapper;
 
     @Override
-    public Page<ExerciseDto> getExercisesByUserId(UUID userId, Pageable pageable) {
+    public DataPage getExercisesByUserId(UUID userId, Pageable pageable) {
         Page<Exercise> userExercises = exerciseRepository.findByUserId(userId, pageable);
         List<ExerciseDto> exerciseDtos = userExercises.getContent().stream().map(this::mapToDto).toList();
-        return new PageImpl<>(exerciseDtos, pageable, userExercises.getTotalElements());
+        DataPage dataPage = new DataPage();
+        dataPage.setTotalElements(userExercises.getTotalElements());
+        dataPage.setTotalPages(userExercises.getTotalPages());
+        dataPage.setCurrentPage(userExercises.getPageable().getPageNumber());
+        dataPage.setPageSize(userExercises.getPageable().getPageSize());
+        dataPage.setExercises(exerciseDtos);
+        return dataPage;
     }
 
     @Override
@@ -70,12 +72,11 @@ public class ExerciseServiceImpl implements ExerciseService {
     }
 
     private ExerciseDto mapToDto(Exercise exercise) {
-        TimeDuration timeDuration = DurationUtil.millisecondsToTimeDuration(exercise.getDuration());
         String exerciseStartDate = getExerciseStartDate(exercise.getZoneId(), exercise.getExerciseStartDate());
         return ExerciseDto.builder()
                 .id(exercise.getId())
                 .exerciseStartDate(exerciseStartDate)
-                .duration(timeDuration)
+                .duration(exercise.getDuration() != null ? exercise.getDuration().longValue() : null)
                 .activity(exercise.getActivity())
                 .distanceUnit(exercise.getDistanceUnit() != null ? exercise.getDistanceUnit().toString() : null)
                 .totalCalories(exercise.getTotalCalories() != null ? exercise.getTotalCalories().intValue() : null)

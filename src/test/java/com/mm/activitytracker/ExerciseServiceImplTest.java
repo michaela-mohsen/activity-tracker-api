@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mm.activitytracker.entity.postgres.DistanceUnit;
 import com.mm.activitytracker.entity.postgres.Exercise;
-import com.mm.activitytracker.model.ExerciseDto;
+import com.mm.activitytracker.model.DataPage;
 import com.mm.activitytracker.repository.ExerciseRepository;
 import com.mm.activitytracker.service.impl.ExerciseServiceImpl;
 import org.junit.jupiter.api.Assertions;
@@ -18,7 +18,6 @@ import org.springframework.data.domain.*;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -45,7 +44,7 @@ public class ExerciseServiceImplTest {
         Page<Exercise> exercises = new PageImpl<>(userExercisesList);
         Pageable pageable = PageRequest.of(0, 10, Sort.by("exerciseStartDate").descending());
         when(repository.findByUserId(userId, pageable)).thenReturn(exercises);
-        Page<ExerciseDto> page = service.getExercisesByUserId(userId, pageable);
+        DataPage page = service.getExercisesByUserId(userId, pageable);
         Assertions.assertEquals(1, page.getTotalPages());
     }
 

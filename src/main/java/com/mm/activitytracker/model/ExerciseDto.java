@@ -1,17 +1,18 @@
 package com.mm.activitytracker.model;
 
-import com.mm.activitytracker.entity.postgres.TimeDuration;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.UUID;
 
-@Data
+@Getter
+@Setter
 @Builder
 public class ExerciseDto {
     private UUID id;
     private String exerciseStartDate;
-    private TimeDuration duration;
+    private Long duration;
     private String activity;
     private String distanceUnit;
     private Integer totalCalories;
