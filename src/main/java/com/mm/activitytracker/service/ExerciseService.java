@@ -14,7 +14,7 @@ import java.util.UUID;
 
 @Component
 public interface ExerciseService {
-    DataPage getExercisesByUserId(UUID userId, Pageable pageable);
+    DataPage getExercisesByUserId(UUID userId, Pageable pageable, String activity);
     List<Exercise> getExercisesByUserId(UUID userId);
     List<Exercise> getExercisesByUserIdAndPlatform(UUID userId, Platform platform);
     void save(List<Exercise> exercises);

@@ -12,4 +12,5 @@ public interface ExerciseRepository extends JpaRepository<Exercise, String> {
     List<Exercise> findByUserId(UUID userId);
     Page<Exercise> findByUserId(UUID userId, Pageable pageable);
     List<Exercise> findByUserIdAndPlatform(UUID userId, String platform);
+    Page<Exercise> findByUserIdAndActivityContaining(UUID userId, String activity, Pageable pageable);
 }

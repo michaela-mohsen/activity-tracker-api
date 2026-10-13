@@ -44,7 +44,7 @@ public class ExerciseServiceImplTest {
         Page<Exercise> exercises = new PageImpl<>(userExercisesList);
         Pageable pageable = PageRequest.of(0, 10, Sort.by("exerciseStartDate").descending());
         when(repository.findByUserId(userId, pageable)).thenReturn(exercises);
-        DataPage page = service.getExercisesByUserId(userId, pageable);
+        DataPage page = service.getExercisesByUserId(userId, pageable, "CORE");
         Assertions.assertEquals(1, page.getTotalPages());
     }
 

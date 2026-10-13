@@ -8,6 +8,8 @@ import com.mm.activitytracker.model.DataPage;
 import com.mm.activitytracker.model.ExerciseDto;
 import com.mm.activitytracker.repository.ExerciseRepository;
 import com.mm.activitytracker.service.ExerciseService;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,6 +20,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
+@Slf4j
 @Service
 public class ExerciseServiceImpl implements ExerciseService {
     @Autowired
@@ -27,8 +30,13 @@ public class ExerciseServiceImpl implements ExerciseService {
     private ObjectMapper objectMapper;
 
     @Override
-    public DataPage getExercisesByUserId(UUID userId, Pageable pageable) {
-        Page<Exercise> userExercises = exerciseRepository.findByUserId(userId, pageable);
+    public DataPage getExercisesByUserId(UUID userId, Pageable pageable, String activity) {
+        Page<Exercise> userExercises;
+        if (!StringUtils.isEmpty(activity)) {
+            userExercises = exerciseRepository.findByUserIdAndActivityContaining(userId, activity.toUpperCase(), pageable);
+        } else {
+            userExercises = exerciseRepository.findByUserId(userId, pageable);
+        }
         List<ExerciseDto> exerciseDtos = userExercises.getContent().stream().map(this::mapToDto).toList();
         DataPage dataPage = new DataPage();
         dataPage.setTotalElements(userExercises.getTotalElements());
