@@ -30,10 +30,12 @@ public class ExerciseServiceImpl implements ExerciseService {
     private ObjectMapper objectMapper;
 
     @Override
-    public DataPage getExercisesByUserId(UUID userId, Pageable pageable, String activity) {
+    public DataPage getExercisesByUserId(UUID userId, Pageable pageable, String activity, String dateFrom, String dateTo) {
         Page<Exercise> userExercises;
         if (!StringUtils.isEmpty(activity)) {
             userExercises = exerciseRepository.findByUserIdAndActivityContaining(userId, activity.toUpperCase(), pageable);
+        } else if (!StringUtils.isEmpty(dateFrom) || !StringUtils.isEmpty(dateTo)) {
+            userExercises = getExercisesByExerciseStartDateAndOperator(dateFrom, dateTo, pageable);
         } else {
             userExercises = exerciseRepository.findByUserId(userId, pageable);
         }
@@ -45,6 +47,17 @@ public class ExerciseServiceImpl implements ExerciseService {
         dataPage.setPageSize(userExercises.getPageable().getPageSize());
         dataPage.setExercises(exerciseDtos);
         return dataPage;
+    }
+
+    private Page<Exercise> getExercisesByExerciseStartDateAndOperator(String dateFrom, String dateTo, Pageable pageable) {
+        OffsetDateTime exerciseStartDateObj;
+        if (!StringUtils.isEmpty(dateTo)) {
+            exerciseStartDateObj = OffsetDateTime.parse(dateTo);
+            return exerciseRepository.findByUserIdAndExerciseStartDateBefore(exerciseStartDateObj, pageable);
+        } else {
+            exerciseStartDateObj = OffsetDateTime.parse(dateFrom);
+            return exerciseRepository.findByUserIdAndExerciseStartDateAfter(exerciseStartDateObj, pageable);
+        }
     }
 
     @Override
