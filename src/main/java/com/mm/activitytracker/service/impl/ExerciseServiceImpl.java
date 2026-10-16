@@ -30,12 +30,12 @@ public class ExerciseServiceImpl implements ExerciseService {
     private ObjectMapper objectMapper;
 
     @Override
-    public DataPage getExercisesByUserId(UUID userId, Pageable pageable, String activity, String dateFrom, String dateTo) {
+    public DataPage getExercisesByUserId(UUID userId, Pageable pageable, String activity, String dateFrom, String dateTo, String dateOn) {
         Page<Exercise> userExercises;
         if (!StringUtils.isEmpty(activity)) {
             userExercises = exerciseRepository.findByUserIdAndActivityContaining(userId, activity.toUpperCase(), pageable);
-        } else if (!StringUtils.isEmpty(dateFrom) || !StringUtils.isEmpty(dateTo)) {
-            userExercises = getExercisesByExerciseStartDateAndOperator(dateFrom, dateTo, pageable);
+        } else if (StringUtils.isNotEmpty(dateFrom) || StringUtils.isNotEmpty(dateTo) || StringUtils.isNotEmpty(dateOn)) {
+            userExercises = getExercisesByExerciseStartDateAndOperator(userId, dateFrom, dateTo, dateOn, pageable);
         } else {
             userExercises = exerciseRepository.findByUserId(userId, pageable);
         }
@@ -49,14 +49,19 @@ public class ExerciseServiceImpl implements ExerciseService {
         return dataPage;
     }
 
-    private Page<Exercise> getExercisesByExerciseStartDateAndOperator(String dateFrom, String dateTo, Pageable pageable) {
+    private Page<Exercise> getExercisesByExerciseStartDateAndOperator(UUID userId, String dateFrom, String dateTo, String dateOn, Pageable pageable) {
         OffsetDateTime exerciseStartDateObj;
+        if (StringUtils.isNotEmpty(dateOn)) {
+            OffsetDateTime startOfDay = OffsetDateTime.parse(dateOn);
+            OffsetDateTime endOfDay = startOfDay.plusDays(1).minusNanos(1);
+            return exerciseRepository.findByUserIdAndExerciseStartDateBetween(userId, startOfDay, endOfDay, pageable);
+        }
         if (!StringUtils.isEmpty(dateTo)) {
             exerciseStartDateObj = OffsetDateTime.parse(dateTo);
-            return exerciseRepository.findByUserIdAndExerciseStartDateBefore(exerciseStartDateObj, pageable);
+            return exerciseRepository.findByUserIdAndExerciseStartDateBefore(userId, exerciseStartDateObj, pageable);
         } else {
             exerciseStartDateObj = OffsetDateTime.parse(dateFrom);
-            return exerciseRepository.findByUserIdAndExerciseStartDateAfter(exerciseStartDateObj, pageable);
+            return exerciseRepository.findByUserIdAndExerciseStartDateAfter(userId, exerciseStartDateObj, pageable);
         }
     }
 

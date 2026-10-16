@@ -17,9 +17,9 @@ public interface ExerciseRepository extends JpaRepository<Exercise, String> {
     List<Exercise> findByUserIdAndPlatform(UUID userId, String platform);
     Page<Exercise> findByUserIdAndActivityContaining(UUID userId, String activity, Pageable pageable);
 
-    @Query("select e from Exercise e where e.exerciseStartDate <= :exerciseStartDate")
-    Page<Exercise> findByUserIdAndExerciseStartDateBefore(@Param("exerciseStartDate") OffsetDateTime exerciseStartDate, Pageable pageable);
+    Page<Exercise> findByUserIdAndExerciseStartDateBefore(UUID userId, OffsetDateTime exerciseStartDate, Pageable pageable);
 
-    @Query("select e from Exercise e where e.exerciseStartDate >= :exerciseStartDate")
-    Page<Exercise> findByUserIdAndExerciseStartDateAfter(@Param("exerciseStartDate") OffsetDateTime exerciseStartDate, Pageable pageable);
+    Page<Exercise> findByUserIdAndExerciseStartDateAfter(UUID userId, OffsetDateTime exerciseStartDate, Pageable pageable);
+
+    Page<Exercise> findByUserIdAndExerciseStartDateBetween(UUID userId, OffsetDateTime startDate, OffsetDateTime endDate, Pageable pageable);
 }

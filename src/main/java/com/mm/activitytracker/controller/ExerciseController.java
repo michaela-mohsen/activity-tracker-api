@@ -19,9 +19,9 @@ public class ExerciseController {
     private ExerciseService exerciseService;
 
     @GetMapping("/{userId}")
-    public ResponseEntity<?> getUserExercises(@PathVariable UUID userId, @RequestParam int page, @RequestParam int size, @RequestParam String sortProperty, @RequestParam String direction, @RequestParam(required = false) String activity, @RequestParam(required = false) String dateFrom, @RequestParam(required = false) String dateTo) {
+    public ResponseEntity<?> getUserExercises(@PathVariable UUID userId, @RequestParam int page, @RequestParam int size, @RequestParam String sortProperty, @RequestParam String direction, @RequestParam(required = false) String activity, @RequestParam(required = false) String dateFrom, @RequestParam(required = false) String dateTo, @RequestParam(required = false) String dateOn) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.fromString(direction), sortProperty));
         log.info("getting user exercises for user id {}, sorting by {} {}. page {}", userId, sortProperty, direction, page);
-        return ResponseEntity.ok(exerciseService.getExercisesByUserId(userId, pageable, activity, dateFrom, dateTo));
+        return ResponseEntity.ok(exerciseService.getExercisesByUserId(userId, pageable, activity, dateFrom, dateTo, dateOn));
     }
 }
