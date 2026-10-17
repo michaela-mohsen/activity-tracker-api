@@ -15,8 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -52,7 +51,10 @@ public class ExerciseServiceImpl implements ExerciseService {
     private Page<Exercise> getExercisesByExerciseStartDateAndOperator(UUID userId, String dateFrom, String dateTo, String dateOn, Pageable pageable) {
         OffsetDateTime exerciseStartDateObj;
         if (StringUtils.isNotEmpty(dateOn)) {
-            OffsetDateTime startOfDay = OffsetDateTime.parse(dateOn);
+            OffsetDateTime dateOnObj = OffsetDateTime.parse(dateOn);
+            OffsetDateTime startOfDay = dateOnObj.toLocalDate()
+                    .atStartOfDay()
+                    .atOffset(ZoneId.systemDefault().getRules().getOffset(Instant.now()));
             OffsetDateTime endOfDay = startOfDay.plusDays(1).minusNanos(1);
             return exerciseRepository.findByUserIdAndExerciseStartDateBetween(userId, startOfDay, endOfDay, pageable);
         }
